@@ -5,6 +5,10 @@ Useful when you have a lot of them. Named kpm-list to avoid name clashes, and fo
 
 Tested with emacs 23 only.
 
+## Screenshot
+
+![Screenshot](https://github.com/KMahoney/kpm-list/raw/master/screenshot.png)
+
 ## Installation
 
 Place kpm-list.el into an emacs load-path and require the feature `kpm-list`. For example:
