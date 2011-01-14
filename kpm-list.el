@@ -141,6 +141,12 @@
 (defun add-line-properties (properties)
   (add-text-properties (point-at-bol) (point-at-eol) properties))
 
+(defun insert-dir (dir &optional face)
+  (insert (propertize dir
+                      'face (or face 'kpm-list-directory-face)
+                      'mouse-face 'highlight
+                      'dir-link t)))
+
 (defun insert-buffer-line (buffer)
   (destructuring-bind (name dir filename mode modified highlight relative) buffer
     (insert (propertize (if modified "* " "  ") 'face 'kpm-list-modified-face))
@@ -151,9 +157,10 @@
     (insert " ")
     (if kpm-list-highlight-relative
         (progn
-          (insert (propertize (car relative) 'face 'kpm-list-old-path-face 'mouse-face 'highlight))
-          (insert (propertize (cdr relative) 'face 'kpm-list-directory-face 'mouse-face 'highlight)))
-      (insert (propertize dir 'face 'kpm-list-directory-face 'mouse-face 'highlight)))
+          (insert-dir (car relative) 'kpm-list-old-path-face)
+          (insert-dir (cdr relative)))
+      (insert-dir dir))
+
     (add-line-properties (list 'buffer-name name 'dir-name dir))
     (insert "\n")))
 
@@ -250,7 +257,7 @@
 ;;; Commands ---------------------------------------------------------
 
 (defun is-directory-link ()
-  (equal (get-text-property (point) 'face) 'kpm-list-directory-face))
+  (get-text-property (point) 'dir-link))
 
 (defun kpm-list-select-buffer ()
   (interactive)
