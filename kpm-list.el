@@ -16,7 +16,8 @@
 (require 'cl)
 (require 'dired)
 
-;;; Buffer Data ------------------------------------------------------
+;;; ------------------------------------------------------------------
+;;; Functions responsible for sorting buffers into their groups.
 
 (defun buffer-info (buffer)
   "Collect list info for a buffer"
@@ -68,6 +69,18 @@
    (<= (length prefix) (length string))
    (string= prefix (substring string 0 (length prefix)))))
 
+(defun is-buffer-subdir (parent subdir)
+  "True if subdir is a subdirectory of parent"
+  (is-prefix (nth 1 parent) (nth 1 subdir)))
+
+(defun buffer-path-difference (parent subdir)
+  "Return the difference in buffer's paths as (same-part . new-part)"
+  (let ((split (length (nth 1 parent)))
+        (path (nth 1 subdir)))
+    (cons
+     (substring path 0 split)
+     (substring path split))))
+
 (defun merge-singles (groups)
   "Collect all the groups with a length of 1 into their own group"
   (remove-if-not 'identity
@@ -75,22 +88,28 @@
                   (remove-if-not '(lambda (g) (> (length g) 1)) groups)
                   (list (apply 'append (remove-if '(lambda (g) (> (length g) 1)) groups))))))
 
-;; TODO create full directory trees
 (defun group-by-prefix (buffers &optional groups)
   "Group buffers if they are a subdirectory of the parent & add relative path to info."
   (if buffers
-      (if (and groups (caar groups) (is-prefix (nth 1 (caar groups)) (nth 1 (car buffers))))
+      (if (and groups (caar groups) (is-buffer-subdir (caar groups) (car buffers)))
+
           ;; append to current group
-          (let* ((relative-path (substring (nth 1 (car buffers)) (length (nth 1 (caar groups)))))
-                 (buffer (append (car buffers) (list relative-path))))
-            (group-by-prefix (cdr buffers) 
-                             (cons (append (car groups) (list buffer))
+          (let* ((head-buffer (caar groups))
+                 (tail-buffer (car (last (car groups))))
+                 (buffer (car buffers))
+                 (relative-path (buffer-path-difference
+                                 (if (is-buffer-subdir tail-buffer buffer) tail-buffer head-buffer)
+                                 buffer))
+                 (new-buffer (append (car buffers) (list relative-path))))
+            (group-by-prefix (cdr buffers)
+                             (cons (append (car groups) (list new-buffer))
                                    (cdr groups))))
+
         ;; create new group
-        (let ((buffer (append (car buffers) (list (nth 1 (car buffers))))))
+        (let ((new-buffer (append (car buffers) (list (cons "" (nth 1 (car buffers)))))))
           (group-by-prefix (cdr buffers)
-                           (cons (list buffer)
-                                 groups))))
+                           (cons (list new-buffer) groups))))
+
     groups))
 
 (defun get-kpm-list-buffers ()
@@ -112,7 +131,9 @@
      (mapcar '(lambda (mode) (sort-by-name (filter-by-mode buffers mode)))
              (unique-modes buffers)))))
 
-;;; Create Buffer ----------------------------------------------------
+
+;;; ------------------------------------------------------------------
+;;; Functions responsible for presenting the list in a buffer.
 
 (defun pad-to-column (col)
   (while (< (current-column) col) (insert " ")))
@@ -128,7 +149,11 @@
     (add-line-properties (list 'mouse-face 'highlight))
 
     (insert " ")
-    (insert (propertize (if kpm-list-relative relative dir) 'face 'kpm-list-directory-face 'mouse-face 'highlight))
+    (if kpm-list-highlight-relative
+        (progn
+          (insert (propertize (car relative) 'face 'kpm-list-old-path-face 'mouse-face 'highlight))
+          (insert (propertize (cdr relative) 'face 'kpm-list-directory-face 'mouse-face 'highlight)))
+      (insert (propertize dir 'face 'kpm-list-directory-face 'mouse-face 'highlight)))
     (add-line-properties (list 'buffer-name name 'dir-name dir))
     (insert "\n")))
 
@@ -271,8 +296,8 @@
   :group 'tools
   :group 'convenience)
 
-(defcustom kpm-list-relative nil
-  "Non-nil means to use relative paths."
+(defcustom kpm-list-highlight-relative t
+  "Non-nil means to highlight changing subdirectories."
   :type 'boolean
   :group 'kpm-list)
 
@@ -289,7 +314,13 @@
 ;;; Faces ------------------------------------------------------------
 
 (defface kpm-list-directory-face
-  '((t (:inherit dired-directory)))
+  '((t (:foreground "LightSkyBlue" :inherit dired-directory)))
+  "*Face used for directories in *Grouped Buffer List* buffer."
+  :group 'kpm-list
+  :group 'font-lock-highlighting-faces)
+
+(defface kpm-list-old-path-face
+  '((t (:foreground "#28A" :inherit kpm-list-directory-face)))
   "*Face used for directories in *Grouped Buffer List* buffer."
   :group 'kpm-list
   :group 'font-lock-highlighting-faces)
