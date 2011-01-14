@@ -249,11 +249,20 @@
 
 ;;; Commands ---------------------------------------------------------
 
+(defun is-directory-link ()
+  (equal (get-text-property (point) 'face) 'kpm-list-directory-face))
+
 (defun kpm-list-select-buffer ()
   (interactive)
-  (if (and (dir-at-point) (equal (get-text-property (point) 'face) 'kpm-list-directory-face))
+  (if (and (dir-at-point) (is-directory-link))
       (dired (dir-at-point))
     (when (buffer-at-point) (switch-to-buffer (buffer-at-point)))))
+
+(defun kpm-list-select-other-window ()
+  (interactive)
+  (if (and (dir-at-point) (is-directory-link))
+      (dired-other-window (dir-at-point))
+    (when (buffer-at-point) (switch-to-buffer-other-window (buffer-at-point)))))
 
 (defun kpm-list-select-dir ()
   (interactive)
@@ -362,6 +371,7 @@
     (suppress-keymap map t)
     (define-key map (kbd "<RET>") 'kpm-list-select-buffer)
     (define-key map (kbd "<mouse-1>") 'kpm-list-select-buffer)
+    (define-key map "o" 'kpm-list-select-other-window)
     (define-key map "d" 'kpm-list-select-dir)
     (define-key map "g" 'kpm-list-refresh)
     (define-key map "k" 'kpm-list-kill-buffer)
