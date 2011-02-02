@@ -23,8 +23,9 @@
   "Collect list info for a buffer"
   (with-current-buffer buffer
     (list (buffer-name)
-          (and (buffer-file-name) (file-name-directory (buffer-file-name)))
-          (and (buffer-file-name) (file-name-nondirectory (buffer-file-name)))
+          (and (kpm-buffer-directory-name))
+          (or (and (buffer-file-name) (file-name-nondirectory (buffer-file-name)))
+              (buffer-name))
           (symbol-name major-mode)
           (buffer-modified-p)
           (member buffer (latest-buffers)))))
@@ -42,11 +43,17 @@
   "Customisable list of last used buffers"
   (take kpm-list-highlight-most-recent (all-buffers)))
 
+(defun kpm-buffer-directory-name (&optional buffer)
+  (with-current-buffer (or buffer (current-buffer))
+    (or dired-directory
+        (and (buffer-file-name)
+             (file-name-directory (buffer-file-name))))))
+
 (defun file-buffers ()
-  (remove-if-not 'buffer-file-name (all-buffers)))
+  (remove-if-not 'kpm-buffer-directory-name (all-buffers)))
 
 (defun non-file-buffers ()
-  (remove-if 'buffer-file-name (all-buffers)))
+  (remove-if 'kpm-buffer-directory-name (all-buffers)))
 
 (defun filter-by-mode (buffers mode)
   (remove-if-not '(lambda (b) (string= mode (nth 3 b))) buffers))
