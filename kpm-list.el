@@ -283,11 +283,11 @@
 
 (defun kpm-list-kill-buffer ()
   (interactive)
-  (let ((buffer-name (buffer-at-point)))
-    (when buffer-name
-      (kpm-list-next-buffer)
-      (kill-buffer buffer-name)
-      (kpm-list-refresh))))
+  (when (and (buffer-at-point) (kill-buffer (buffer-at-point)))
+    (let ((buffer-read-only nil)) (kill-whole-line))
+    (if (buffer-at-point)
+        (setf (point) (buffer-point))
+      (kpm-list-next-buffer))))
 
 (defun kpm-list-prev-buffer ()
   (interactive)
