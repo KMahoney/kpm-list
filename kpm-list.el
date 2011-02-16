@@ -200,14 +200,14 @@
           ;; buffers
           (dolist (buffer group)
             (insert-buffer-line buffer))
-          (insert "\n")))
+          (when (not kpm-list-compact) (insert "\n"))))
 
       ;; non-file
       (header "Other Buffers")
       (dolist (mode-group (get-non-file-kpm-list-buffers))
         (dolist (buffer mode-group)
           (insert-non-file-buffer-line buffer))
-        (insert "\n")))
+          (when (not kpm-list-compact) (insert "\n"))))
 
     (kpm-list-mode)))
 
@@ -321,6 +321,11 @@
 
 (defcustom kpm-list-highlight-relative t
   "Non-nil means to highlight changing subdirectories."
+  :type 'boolean
+  :group 'kpm-list)
+
+(defcustom kpm-list-compact nil
+  "Non-nil means to use a more compact display."
   :type 'boolean
   :group 'kpm-list)
 
