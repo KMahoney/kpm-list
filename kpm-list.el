@@ -19,18 +19,18 @@
 ;;; ------------------------------------------------------------------
 ;;; Functions responsible for sorting buffers into their groups.
 
-(defun buffer-info (buffer)
+(defun kpml/buffer-info (buffer)
   "Collect list info for a buffer"
   (with-current-buffer buffer
     (list (buffer-name)
-          (and (kpm-buffer-directory-name))
+          (and (kpml/kpm-buffer-directory-name))
           (or (and (buffer-file-name) (file-name-nondirectory (buffer-file-name)))
               (buffer-name))
           (symbol-name major-mode)
           (buffer-modified-p)
-          (member buffer (latest-buffers)))))
+          (member buffer (kpml/latest-buffers)))))
 
-(defun all-buffers ()
+(defun kpml/all-buffers ()
   "All buffers suitable for listing"
   (remove-if
    (lambda (b)
@@ -39,48 +39,48 @@
       (string= (buffer-name b) kpm-list-buffer-name)))
    (buffer-list)))
 
-(defun latest-buffers ()
+(defun kpml/latest-buffers ()
   "Customisable list of last used buffers"
-  (take kpm-list-highlight-most-recent (all-buffers)))
+  (kpml/take kpm-list-highlight-most-recent (kpml/all-buffers)))
 
-(defun kpm-buffer-directory-name (&optional buffer)
+(defun kpml/kpm-buffer-directory-name (&optional buffer)
   (with-current-buffer (or buffer (current-buffer))
     (or dired-directory
         (and (buffer-file-name)
              (file-name-directory (buffer-file-name))))))
 
-(defun file-buffers ()
-  (remove-if-not 'kpm-buffer-directory-name (all-buffers)))
+(defun kpml/file-buffers ()
+  (remove-if-not 'kpml/kpm-buffer-directory-name (kpml/all-buffers)))
 
-(defun non-file-buffers ()
-  (remove-if 'kpm-buffer-directory-name (all-buffers)))
+(defun kpml/non-file-buffers ()
+  (remove-if 'kpml/kpm-buffer-directory-name (kpml/all-buffers)))
 
-(defun filter-by-mode (buffers mode)
+(defun kpml/filter-by-mode (buffers mode)
   (remove-if-not '(lambda (b) (string= mode (nth 3 b))) buffers))
 
 ;; buffer sorting
-(defun sort-by-nth (buffers n)
+(defun kpml/sort-by-nth (buffers n)
   (sort buffers (lambda (a b) (string< (nth n a) (nth n b)))))
-(defun sort-by-name      (buffers) (sort-by-nth buffers 0))
-(defun sort-by-dir       (buffers) (sort-by-nth buffers 1))
-(defun sort-by-file-name (buffers) (sort-by-nth buffers 2))
-(defun sort-by-mode      (buffers) (sort-by-nth buffers 3))
+(defun kpml/sort-by-name      (buffers) (kpml/sort-by-nth buffers 0))
+(defun kpml/sort-by-dir       (buffers) (kpml/sort-by-nth buffers 1))
+(defun kpml/sort-by-file-name (buffers) (kpml/sort-by-nth buffers 2))
+(defun kpml/sort-by-mode      (buffers) (kpml/sort-by-nth buffers 3))
 
-(defun unique-modes (buffers)
+(defun kpml/unique-modes (buffers)
   "A list of unique modes in buffer list"
   (sort (delete-dups (mapcar '(lambda (b) (nth 3 b)) buffers)) 'string<))
 
-(defun is-prefix (prefix string)
+(defun kpml/is-prefix (prefix string)
   "is `prefix` the prefix of `string`"
   (and
    (<= (length prefix) (length string))
    (string= prefix (substring string 0 (length prefix)))))
 
-(defun is-buffer-subdir (parent subdir)
+(defun kpml/is-buffer-subdir (parent subdir)
   "True if subdir is a subdirectory of parent"
-  (is-prefix (nth 1 parent) (nth 1 subdir)))
+  (kpml/is-prefix (nth 1 parent) (nth 1 subdir)))
 
-(defun buffer-path-difference (parent subdir)
+(defun kpml/buffer-path-difference (parent subdir)
   "Return the difference in buffer's paths as (same-part . new-part)"
   (let ((split (length (nth 1 parent)))
         (path (nth 1 subdir)))
@@ -88,125 +88,125 @@
      (substring path 0 split)
      (substring path split))))
 
-(defun merge-singles (groups)
+(defun kpml/merge-singles (groups)
   "Collect all the groups with a length of 1 into their own group"
   (remove-if-not 'identity
                  (append
                   (remove-if-not '(lambda (g) (> (length g) 1)) groups)
                   (list (apply 'append (remove-if '(lambda (g) (> (length g) 1)) groups))))))
 
-(defun group-by-prefix (buffers &optional groups)
+(defun kpml/group-by-prefix (buffers &optional groups)
   "Group buffers if they are a subdirectory of the parent & add relative path to info."
   (if buffers
-      (if (and groups (caar groups) (is-buffer-subdir (caar groups) (car buffers)))
+      (if (and groups (caar groups) (kpml/is-buffer-subdir (caar groups) (car buffers)))
 
           ;; append to current group
           (let* ((head-buffer (caar groups))
                  (tail-buffer (car (last (car groups))))
                  (buffer (car buffers))
-                 (relative-path (buffer-path-difference
-                                 (if (is-buffer-subdir tail-buffer buffer) tail-buffer head-buffer)
+                 (relative-path (kpml/buffer-path-difference
+                                 (if (kpml/is-buffer-subdir tail-buffer buffer) tail-buffer head-buffer)
                                  buffer))
                  (new-buffer (append (car buffers) (list relative-path))))
-            (group-by-prefix (cdr buffers)
+            (kpml/group-by-prefix (cdr buffers)
                              (cons (append (car groups) (list new-buffer))
                                    (cdr groups))))
 
         ;; create new group
         (let ((new-buffer (append (car buffers) (list (cons "" (nth 1 (car buffers)))))))
-          (group-by-prefix (cdr buffers)
+          (kpml/group-by-prefix (cdr buffers)
                            (cons (list new-buffer) groups))))
 
     groups))
 
-(defun get-kpm-list-buffers ()
+(defun kpml/get-kpm-list-buffers ()
   "Return a list of file buffers as a list of buffer groups for each mode."
-  (let ((buffers (mapcar 'buffer-info (file-buffers))))
+  (let ((buffers (mapcar 'kpml/buffer-info (kpml/file-buffers))))
     (mapcar '(lambda (mode)
                (cons mode
-                     (merge-singles
-                      (group-by-prefix
-                       (sort-by-dir
-                        (sort-by-file-name
-                         (filter-by-mode buffers mode)))))))
-            (unique-modes buffers))))
+                     (kpml/merge-singles
+                      (kpml/group-by-prefix
+                       (kpml/sort-by-dir
+                        (kpml/sort-by-file-name
+                         (kpml/filter-by-mode buffers mode)))))))
+            (kpml/unique-modes buffers))))
 
-(defun get-non-file-kpm-list-buffers ()
+(defun kpml/get-non-file-kpm-list-buffers ()
   "Return a list of non-file buffers as a list of buffers grouped by mode."
-  (let ((buffers (mapcar 'buffer-info (non-file-buffers))))
-    (merge-singles
-     (mapcar '(lambda (mode) (sort-by-name (filter-by-mode buffers mode)))
-             (unique-modes buffers)))))
+  (let ((buffers (mapcar 'kpml/buffer-info (kpml/non-file-buffers))))
+    (kpml/merge-singles
+     (mapcar '(lambda (mode) (kpml/sort-by-name (kpml/filter-by-mode buffers mode)))
+             (kpml/unique-modes buffers)))))
 
 
 ;;; ------------------------------------------------------------------
 ;;; Functions responsible for presenting the list in a buffer.
 
-(defun pad-to-column (col)
+(defun kpml/pad-to-column (col)
   (while (< (current-column) col) (insert " ")))
 
-(defun add-line-properties (properties)
+(defun kpml/add-line-properties (properties)
   (add-text-properties (point-at-bol) (point-at-eol) properties))
 
-(defun insert-dir (dir &optional face)
+(defun kpml/insert-dir (dir &optional face)
   (insert (propertize dir
                       'face (or face 'kpm-list-directory-face)
                       'mouse-face 'highlight
                       'dir-link t)))
 
-(defun insert-buffer-line (buffer)
+(defun kpml/insert-buffer-line (buffer)
   (destructuring-bind (name dir filename mode modified highlight relative) buffer
     (insert (propertize (if modified "* " "  ") 'face 'kpm-list-modified-face))
     (insert (propertize filename 'face (if highlight 'kpm-list-buffer-highlight-face 'kpm-list-buffer-face)))
     (insert (propertize " "  'display '(space . (:align-to 40))))
-    (add-line-properties (list 'mouse-face 'highlight))
+    (kpml/add-line-properties (list 'mouse-face 'highlight))
 
     (insert " ")
     (if kpm-list-highlight-relative
         (progn
-          (insert-dir (car relative) 'kpm-list-old-path-face)
-          (insert-dir (cdr relative)))
-      (insert-dir dir))
+          (kpml/insert-dir (car relative) 'kpm-list-old-path-face)
+          (kpml/insert-dir (cdr relative)))
+      (kpml/insert-dir dir))
 
-    (add-line-properties (list 'buffer-name name 'dir-name dir))
+    (kpml/add-line-properties (list 'buffer-name name 'dir-name dir))
     (insert "\n")))
 
-(defun insert-non-file-buffer-line (buffer)
+(defun kpml/insert-non-file-buffer-line (buffer)
   (destructuring-bind (name dir filename mode modified highlight) buffer
     (insert "  ")
     (insert (propertize name 'face (if highlight 'kpm-list-buffer-highlight-face 'kpm-list-buffer-face)))
     (insert (propertize " "  'display '(space . (:align-to 40))))
     (insert " ")
     (insert (propertize mode 'face 'kpm-list-mode-face))
-    (add-line-properties (list 'buffer-name name 'mouse-face 'highlight))
+    (kpml/add-line-properties (list 'buffer-name name 'mouse-face 'highlight))
     (insert "\n")))
 
-(defun header (title)
+(defun kpml/header (title)
   (insert "\n")
   (insert "  " title (propertize " "  'display '(space . (:align-to right))))
-  (add-line-properties '(face kpm-list-header-face))
+  (kpml/add-line-properties '(face kpm-list-header-face))
   (insert "\n\n"))
 
-(defun make-kpm-list-buffer ()
+(defun kpml/make-kpm-list-buffer ()
   (with-current-buffer (get-buffer-create kpm-list-buffer-name)
     (let ((buffer-read-only nil))
       (erase-buffer)
 
       ;; modes
-      (dolist (mode (get-kpm-list-buffers))
-        (header (car mode))
+      (dolist (mode (kpml/get-kpm-list-buffers))
+        (kpml/header (car mode))
         ;; groups
         (dolist (group (cdr mode))
           ;; buffers
           (dolist (buffer group)
-            (insert-buffer-line buffer))
+            (kpml/insert-buffer-line buffer))
           (when (not kpm-list-compact) (insert "\n"))))
 
       ;; non-file
-      (header "Other Buffers")
-      (dolist (mode-group (get-non-file-kpm-list-buffers))
+      (kpml/header "Other Buffers")
+      (dolist (mode-group (kpml/get-non-file-kpm-list-buffers))
         (dolist (buffer mode-group)
-          (insert-non-file-buffer-line buffer))
+          (kpml/insert-non-file-buffer-line buffer))
           (when (not kpm-list-compact) (insert "\n"))))
 
     (kpm-list-mode)))
@@ -214,103 +214,103 @@
 
 ;;; Util -------------------------------------------------------------
 
-(defun take (n list)
-  (if (and list (> n 0)) (cons (car list) (take (- n 1) (cdr list)))))
+(defun kpml/take (n list)
+  (if (and list (> n 0)) (cons (car list) (kpml/take (- n 1) (cdr list)))))
 
-(defun buffer-at-point ()
+(defun kpml/buffer-at-point ()
   (get-text-property (point) 'buffer-name))
 
-(defun buffer-point ()
+(defun kpml/buffer-point ()
   (+ 2 (point-at-bol)))
 
-(defun dir-at-point ()
+(defun kpml/dir-at-point ()
   (get-text-property (point) 'dir-name))
 
-(defun first-line-p ()
+(defun kpml/first-line-p ()
   (= (point-at-bol) (point-min)))
 
-(defun last-line-p ()
+(defun kpml/last-line-p ()
   (= (point-at-eol) (point-max)))
 
-(defun first-buffer ()
+(defun kpml/first-buffer ()
   (beginning-of-buffer)
   (kpm-list-next-buffer))
 
-(defun goto-buffer (buffer-name)
+(defun kpml/goto-buffer (buffer-name)
   (if buffer-name
       (progn
         (end-of-buffer)
-        (while (and (not (string= buffer-name (buffer-at-point))) (not (first-line-p)))
+        (while (and (not (string= buffer-name (kpml/buffer-at-point))) (not (kpml/first-line-p)))
           (forward-line -1))
-        (if (buffer-at-point)
-            (setf (point) (buffer-point))
-          (first-buffer)))
-    (first-buffer)))
+        (if (kpml/buffer-at-point)
+            (setf (point) (kpml/buffer-point))
+          (kpml/first-buffer)))
+    (kpml/first-buffer)))
 
-(defun next-buffer-point ()
+(defun kpml/next-buffer-point ()
   (save-excursion
     (forward-line)
-    (while (and (not (buffer-at-point)) (not (last-line-p)))
+    (while (and (not (kpml/buffer-at-point)) (not (kpml/last-line-p)))
       (forward-line))
-    (and (buffer-at-point) (buffer-point))))
+    (and (kpml/buffer-at-point) (kpml/buffer-point))))
 
-(defun prev-buffer-point ()
+(defun kpml/prev-buffer-point ()
   (save-excursion
     (forward-line -1)
-    (while (and (not (buffer-at-point)) (not (first-line-p)))
+    (while (and (not (kpml/buffer-at-point)) (not (kpml/first-line-p)))
       (forward-line -1))
-    (and (buffer-at-point) (buffer-point))))
+    (and (kpml/buffer-at-point) (kpml/buffer-point))))
 
 ;;; Commands ---------------------------------------------------------
 
-(defun is-directory-link ()
+(defun kpml/is-directory-link ()
   (get-text-property (point) 'dir-link))
 
 (defun kpm-list-select-buffer ()
   (interactive)
-  (if (and (dir-at-point) (is-directory-link))
-      (dired (dir-at-point))
-    (when (buffer-at-point) (switch-to-buffer (buffer-at-point)))))
+  (if (and (kpml/dir-at-point) (kpml/is-directory-link))
+      (dired (kpml/dir-at-point))
+    (when (kpml/buffer-at-point) (switch-to-buffer (kpml/buffer-at-point)))))
 
 (defun kpm-list-select-other-window ()
   (interactive)
-  (if (and (dir-at-point) (is-directory-link))
-      (dired-other-window (dir-at-point))
-    (when (buffer-at-point) (switch-to-buffer-other-window (buffer-at-point)))))
+  (if (and (kpml/dir-at-point) (kpml/is-directory-link))
+      (dired-other-window (kpml/dir-at-point))
+    (when (kpml/buffer-at-point) (switch-to-buffer-other-window (kpml/buffer-at-point)))))
 
 (defun kpm-list-select-dir ()
   (interactive)
-  (when (dir-at-point) (dired (dir-at-point))))
+  (when (kpml/dir-at-point) (dired (kpml/dir-at-point))))
 
 (defun kpm-list-refresh ()
   (interactive)
-  (let ((buffer (or (buffer-at-point) (buffer-name (car (all-buffers))))))
-    (make-kpm-list-buffer)
-    (goto-buffer buffer)))
+  (let ((buffer (or (kpml/buffer-at-point) (buffer-name (car (kpml/all-buffers))))))
+    (kpml/make-kpm-list-buffer)
+    (kpml/goto-buffer buffer)))
 
 (defun kpm-list-kill-buffer ()
   (interactive)
-  (when (and (buffer-at-point) (kill-buffer (buffer-at-point)))
+  (when (and (kpml/buffer-at-point) (kill-buffer (kpml/buffer-at-point)))
     (let ((buffer-read-only nil)) (kill-whole-line))
-    (if (buffer-at-point)
-        (setf (point) (buffer-point))
+    (if (kpml/buffer-at-point)
+        (setf (point) (kpml/buffer-point))
       (kpm-list-next-buffer))))
 
 (defun kpm-list-prev-buffer ()
   (interactive)
-  (let ((p (prev-buffer-point)))
+  (let ((p (kpml/prev-buffer-point)))
     (when p (setf (point) p))))
 
 (defun kpm-list-next-buffer ()
   (interactive)
-  (let ((p (next-buffer-point)))
+  (let ((p (kpml/next-buffer-point)))
     (when p (setf (point) p))))
 
 (defun kpm-list ()
   (interactive)
-  (make-kpm-list-buffer)
+  (kpml/make-kpm-list-buffer)
   (switch-to-buffer kpm-list-buffer-name)
-  (goto-buffer (buffer-name (car (all-buffers)))))
+  (kpml/goto-buffer (buffer-name (car (kpml/all-buffers)))))
 
 ;;; Options ----------------------------------------------------------
 
