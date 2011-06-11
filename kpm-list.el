@@ -142,9 +142,6 @@
 ;;; ------------------------------------------------------------------
 ;;; Functions responsible for presenting the list in a buffer.
 
-(defun kpml/pad-to-column (col)
-  (while (< (current-column) col) (insert " ")))
-
 (defun kpml/add-line-properties (properties)
   (add-text-properties (point-at-bol) (point-at-eol) properties))
 
