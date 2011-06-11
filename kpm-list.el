@@ -261,10 +261,10 @@
       (forward-line -1))
     (and (kpml/buffer-at-point) (kpml/buffer-point))))
 
-;;; Commands ---------------------------------------------------------
-
 (defun kpml/is-directory-link ()
   (get-text-property (point) 'dir-link))
+
+;;; Commands ---------------------------------------------------------
 
 (defun kpm-list-select-buffer ()
   (interactive)
