@@ -1,8 +1,13 @@
+;;; kpm-list.el --- An emacs buffer list that tries to intelligently group together buffers.
 
-;; kpm-list: An emacs buffer list that tries to intelligently group together buffers.
-;;
 ;; Copyright 2011 Kevin Mahoney. All rights reserved.
-;;
+
+;; Author:   Kevin Mahoney
+;; URL:      https://github.com/KMahoney/kpm-list/
+;; Version:  1.0
+
+;; This file is NOT part of GNU Emacs.
+
 ;; Redistribution and use in source and binary forms, with or without modification, are
 ;; permitted provided that the following conditions are met:
 ;;
@@ -263,28 +268,33 @@
 
 ;;; Commands ---------------------------------------------------------
 
+;;;###autoload
 (defun kpm-list-select-buffer ()
   (interactive)
   (if (and (kpml/dir-at-point) (kpml/is-directory-link))
       (dired (kpml/dir-at-point))
     (when (kpml/buffer-at-point) (switch-to-buffer (kpml/buffer-at-point)))))
 
+;;;###autoload
 (defun kpm-list-select-other-window ()
   (interactive)
   (if (and (kpml/dir-at-point) (kpml/is-directory-link))
       (dired-other-window (kpml/dir-at-point))
     (when (kpml/buffer-at-point) (switch-to-buffer-other-window (kpml/buffer-at-point)))))
 
+;;;###autoload
 (defun kpm-list-select-dir ()
   (interactive)
   (when (kpml/dir-at-point) (dired (kpml/dir-at-point))))
 
+;;;###autoload
 (defun kpm-list-refresh ()
   (interactive)
   (let ((buffer (or (kpml/buffer-at-point) (buffer-name (car (kpml/all-buffers))))))
     (kpml/make-kpm-list-buffer)
     (kpml/goto-buffer buffer)))
 
+;;;###autoload
 (defun kpm-list-kill-buffer ()
   (interactive)
   (when (and (kpml/buffer-at-point) (kill-buffer (kpml/buffer-at-point)))
@@ -293,16 +303,19 @@
         (setf (point) (kpml/buffer-point))
       (kpm-list-next-buffer))))
 
+;;;###autoload
 (defun kpm-list-prev-buffer ()
   (interactive)
   (let ((p (kpml/prev-buffer-point)))
     (when p (setf (point) p))))
 
+;;;###autoload
 (defun kpm-list-next-buffer ()
   (interactive)
   (let ((p (kpml/next-buffer-point)))
     (when p (setf (point) p))))
 
+;;;###autoload
 (defun kpm-list ()
   (interactive)
   (kpml/make-kpm-list-buffer)
@@ -407,3 +420,5 @@
 (global-set-key (kbd "C-x C-b") 'kpm-list)
 
 (provide 'kpm-list)
+
+;;; kpm-list.el ends here
