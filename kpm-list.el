@@ -52,7 +52,7 @@
   (with-current-buffer (or buffer (current-buffer))
     (or dired-directory
         (and (buffer-file-name)
-             (file-name-directory (buffer-file-name))))))
+             (abbreviate-file-name (file-name-directory (buffer-file-name)))))))
 
 (defun kpml/file-buffers ()
   (remove-if-not 'kpml/kpm-buffer-directory-name (kpml/all-buffers)))
