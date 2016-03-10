@@ -414,11 +414,6 @@
 (define-derived-mode kpm-list-mode special-mode "Grouped Buffer List"
   "Major mode for editing a list of open buffers.")
 
-
-;;; Misc. ------------------------------------------------------------
-
-(global-set-key (kbd "C-x C-b") 'kpm-list)
-
 (provide 'kpm-list)
 
 ;;; kpm-list.el ends here

@@ -16,8 +16,6 @@ Place kpm-list.el into an emacs load-path and require the feature `kpm-list`. Fo
     (push "~/emacs.d" load-path)
     (require 'kpm-list)
 
-This will override your C-x C-b key.
-
 ## Improvements to be made
 
 * I would like to display the buffers grouped together by directory as a fancy-pants tree.
